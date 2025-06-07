@@ -1,0 +1,51 @@
+name: task-management-system
+services:
+  # Backend API
+  - name: server
+    source_dir: /server
+    github:
+      repo: YOUR_USERNAME/task-management-system
+      branch: main
+    run_command: npm start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: JWT_SECRET
+        value: your-production-jwt-secret-key
+      - key: JWT_EXPIRE
+        value: 30d
+      - key: MONGODB_URI
+        value: ${mongodb.DATABASE_URL}
+    health_check:
+      http_path: /api/health
+    http_port: 5000
+    routes:
+      - path: /api
+
+  # Frontend Client
+  - name: client
+    source_dir: /client
+    github:
+      repo: YOUR_USERNAME/task-management-system
+      branch: main
+    build_command: npm run build
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: REACT_APP_API_URL
+        value: ${server.PUBLIC_URL}/api
+    http_port: 80
+    routes:
+      - path: /
+
+databases:
+  - name: mongodb
+    engine: MONGODB
+    version: "6"
+    size: basic-xs 

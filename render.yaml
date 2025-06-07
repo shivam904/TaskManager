@@ -1,0 +1,48 @@
+services:
+  # MongoDB Database
+  - type: pserv
+    name: mongodb
+    env: docker
+    dockerfilePath: ./Dockerfile.mongo
+    disk:
+      name: mongodb-data
+      mountPath: /data/db
+      sizeGB: 1
+    
+  # Node.js Backend
+  - type: web
+    name: task-management-server
+    env: docker
+    dockerfilePath: ./server/Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        fromService:
+          type: pserv
+          name: mongodb
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 30d
+    healthCheckPath: /api/health
+
+  # React Frontend
+  - type: web
+    name: task-management-client
+    env: docker
+    dockerfilePath: ./client/Dockerfile
+    envVars:
+      - key: REACT_APP_API_URL
+        fromService:
+          type: web
+          name: task-management-server
+          property: host
+          
+databases:
+  - name: mongodb
+    databaseName: taskmanagement
+    user: admin 
