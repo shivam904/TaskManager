@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: task-management-db-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: taskmanagement
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_dev:/data/db
+      - ./server/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - task-management-network-dev
+
+  # Node.js Backend Server (Development)
+  server:
+    image: node:18-alpine
+    container_name: task-management-server-dev
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/taskmanagement?authSource=admin
+      JWT_SECRET: your-super-secret-jwt-key-for-development
+      JWT_EXPIRE: 30d
+      UPLOAD_PATH: ./uploads
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+      - uploads_data_dev:/app/uploads
+    command: sh -c "npm install && npm run dev"
+    depends_on:
+      - mongodb
+    networks:
+      - task-management-network-dev
+
+  # React Frontend Client (Development)
+  client:
+    image: node:18-alpine
+    container_name: task-management-client-dev
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+      REACT_APP_SOCKET_URL: http://localhost:5000
+      CHOKIDAR_USEPOLLING: true
+      WDS_SOCKET_HOST: localhost
+      WDS_SOCKET_PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - server
+    networks:
+      - task-management-network-dev
+    stdin_open: true
+    tty: true
+
+volumes:
+  mongodb_data_dev:
+    driver: local
+  uploads_data_dev:
+    driver: local
+
+networks:
+  task-management-network-dev:
+    driver: bridge 
